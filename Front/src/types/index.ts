@@ -12,16 +12,35 @@ export interface GameEvent {
   p: number; // flat points
 }
 
-export type LogType = "mat" | "event";
-
-export interface LogEntry {
+/** A CP member as returned by the backend. */
+export interface Member {
   id: string;
-  type: LogType;
-  member: string;
-  pts: number;
-  desc: string;
+  name: string;
+}
+
+/** A logged contribution as returned by the backend. */
+export interface Contribution {
+  id: string;
+  memberId: string;
+  memberName: string;
+  type: "Material" | "Event";
+  points: number;
+  description: string;
   badge: string; // SOLO | PARTY ÷N | EVENT
-  ts: number;
+  ts: number; // unix epoch ms
+}
+
+/** One entry to send when logging contributions. */
+export interface CreateContribution {
+  memberId: string;
+  type: "Material" | "Event";
+  points: number;
+  description: string;
+  badge: string;
+}
+
+export interface Settings {
+  divisor: number;
 }
 
 export interface MemberStats {
