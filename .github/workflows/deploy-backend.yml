@@ -1,0 +1,85 @@
+name: Deploy Backend (IIS)
+
+# Deploys the .NET 10 API to the Windows/IIS server via a self-hosted runner.
+# Only runs when backend code changes on main.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Back End/**"
+      - ".github/workflows/deploy-backend.yml"
+  workflow_dispatch: # allow manual runs from the Actions tab
+
+# Avoid two deploys racing on the same server.
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+env:
+  # ---- FILL THESE WITH YOUR IIS VALUES ----
+  IIS_SITE_NAME: "L2CPTracker" # IIS site name
+  IIS_APP_POOL: "L2CPTracker" # Application Pool name
+  DEPLOY_PATH: 'C:\inetpub\wwwroot\l2cp-api' # physical path IIS serves
+  # -----------------------------------------
+  PROJECT: "Back End/src/Api/L2CpTracker.Api.csproj"
+  DOTNET_VERSION: "10.0.x"
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, windows] # the runner installed on your IIS server
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore "${{ env.PROJECT }}"
+
+      - name: Publish (framework-dependent)
+        run: >
+          dotnet publish "${{ env.PROJECT }}"
+          -c Release
+          --no-restore
+          -o "${{ github.workspace }}\publish"
+
+      - name: Stop IIS app pool
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+          if ((Get-WebAppPoolState -Name "$env:IIS_APP_POOL").Value -ne 'Stopped') {
+            Stop-WebAppPool -Name "$env:IIS_APP_POOL"
+            # wait until it is fully stopped so file locks are released
+            $tries = 0
+            while ((Get-WebAppPoolState -Name "$env:IIS_APP_POOL").Value -ne 'Stopped' -and $tries -lt 20) {
+              Start-Sleep -Milliseconds 500; $tries++
+            }
+          }
+          Write-Host "App pool '$env:IIS_APP_POOL' stopped."
+
+      - name: Deploy files
+        shell: powershell
+        run: |
+          $src = "${{ github.workspace }}\publish"
+          $dst = "$env:DEPLOY_PATH"
+          if (-not (Test-Path $dst)) { New-Item -ItemType Directory -Path $dst -Force | Out-Null }
+          # Mirror published output. Keep server-managed files (logs, data-protection keys).
+          robocopy $src $dst /MIR /NJH /NJS /NDL /NP /XD "logs" "keys" /XF "app_offline.htm"
+          if ($LASTEXITCODE -ge 8) { Write-Error "robocopy failed ($LASTEXITCODE)"; exit 1 }
+          Write-Host "Files deployed to $dst (robocopy exit $LASTEXITCODE)."
+          exit 0
+
+      - name: Start IIS app pool
+        if: always() # bring the site back even if a previous step failed
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+          Start-WebAppPool -Name "$env:IIS_APP_POOL"
+          if ((Get-WebsiteState -Name "$env:IIS_SITE_NAME").Value -ne 'Started') {
+            Start-Website -Name "$env:IIS_SITE_NAME"
+          }
+          Write-Host "App pool and site started."
