@@ -16,6 +16,7 @@ export const contributionsApi = {
   list: () => api.get<Contribution[]>("/contributions"),
   create: (entries: CreateContribution[]) =>
     api.post<Contribution[]>("/contributions", { entries }),
+  remove: (id: string) => api.del(`/contributions/${id}`),
 };
 
 export const settingsApi = {

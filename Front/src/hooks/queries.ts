@@ -54,6 +54,14 @@ export function useCreateContributions() {
   });
 }
 
+export function useDeleteContribution() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => contributionsApi.remove(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.contributions }),
+  });
+}
+
 /* ---------- Settings ---------- */
 export function useSettings() {
   return useQuery({ queryKey: keys.settings, queryFn: settingsApi.get });

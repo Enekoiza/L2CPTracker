@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react";
-import { memberStats, useContributions, useMembers } from "../../hooks/queries";
+import {
+  memberStats,
+  useContributions,
+  useDeleteContribution,
+  useMembers,
+} from "../../hooks/queries";
+import { useToast } from "../../components/Toast";
 import { Empty } from "../../components/ui";
 import { fmt, fmtDate } from "../../lib/search";
 
@@ -12,7 +18,19 @@ function badgeClass(badge: string): string {
 export function LogTab() {
   const { data: members = [], isLoading: mLoading } = useMembers();
   const { data: contributions = [], isLoading: cLoading, isError } = useContributions();
+  const deleteContribution = useDeleteContribution();
+  const toast = useToast();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const removeEntry = async (id: string, label: string) => {
+    if (!confirm(`Delete this entry?\n\n${label}`)) return;
+    try {
+      await deleteContribution.mutateAsync(id);
+      toast("Entry deleted");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not delete entry");
+    }
+  };
 
   const rows = useMemo(() => {
     const r = members
@@ -121,8 +139,19 @@ export function LogTab() {
                           {e.badge}
                         </span>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="flex items-center gap-2 shrink-0">
                         <div className="text-green font-bold">+{e.points}</div>
+                        <button
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            removeEntry(e.id, `${e.description} (+${e.points})`);
+                          }}
+                          disabled={deleteContribution.isPending}
+                          title="Delete entry"
+                          className="bg-none border-none text-[color:var(--color-b)] text-base cursor-pointer leading-none disabled:opacity-40"
+                        >
+                          ×
+                        </button>
                       </div>
                     </div>
                   ))
