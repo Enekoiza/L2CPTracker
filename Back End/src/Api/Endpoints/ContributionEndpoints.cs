@@ -18,6 +18,13 @@ public static class ContributionEndpoints
             return TypedResults.Created("/api/contributions", created);
         });
 
+        group.MapDelete("/{id:guid}", async (
+            Guid id, IContributionService service, CancellationToken ct) =>
+        {
+            await service.DeleteAsync(id, ct);
+            return TypedResults.NoContent();
+        });
+
         return app;
     }
 }

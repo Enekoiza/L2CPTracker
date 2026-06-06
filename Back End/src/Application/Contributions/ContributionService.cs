@@ -55,6 +55,14 @@ public sealed class ContributionService(
             .ToList();
     }
 
+    public async Task DeleteAsync(Guid id, CancellationToken ct)
+    {
+        var removed = await contributions.DeleteAsync(id, ct);
+        if (!removed)
+            throw new NotFoundException($"Contribution '{id}' was not found.");
+        await uow.SaveChangesAsync(ct);
+    }
+
     private static ContributionDto ToDto(Contribution c) => new(
         c.Id,
         c.MemberId,

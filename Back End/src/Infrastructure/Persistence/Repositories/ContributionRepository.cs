@@ -15,4 +15,12 @@ public sealed class ContributionRepository(AppDbContext db) : IContributionRepos
 
     public async Task AddRangeAsync(IEnumerable<Contribution> contributions, CancellationToken ct) =>
         await db.Contributions.AddRangeAsync(contributions, ct);
+
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct)
+    {
+        var contribution = await db.Contributions.FirstOrDefaultAsync(c => c.Id == id, ct);
+        if (contribution is null) return false;
+        db.Contributions.Remove(contribution);
+        return true;
+    }
 }
