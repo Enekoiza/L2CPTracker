@@ -1,0 +1,60 @@
+import type { Grade, Material } from "../types";
+
+export const MATERIALS: Material[] = [
+  // No grade
+  { n: "Stem", p: 30, g: "NG", a: ["stem"] },
+  { n: "Thread", p: 40, g: "NG", a: ["thread"] },
+  { n: "Varnish", p: 50, g: "NG", a: ["varnish"] },
+  { n: "Suede", p: 50, g: "NG", a: ["suede"] },
+  { n: "Animal Skin", p: 60, g: "NG", a: ["skin", "animal skin", "askin"] },
+  { n: "Animal Bone", p: 60, g: "NG", a: ["bone", "animal bone", "abone"] },
+  { n: "Iron Ore", p: 200, g: "NG", a: ["iron", "iron ore"] },
+  { n: "Coal", p: 300, g: "NG", a: ["coal"] },
+  { n: "Spirit Ore", p: 900, g: "NG", a: ["spirit", "spirit ore", "so"] },
+  { n: "Soul Ore", p: 900, g: "NG", a: ["soul", "soul ore"] },
+  { n: "Braided Hemp", p: 100, g: "NG", a: ["hemp", "braided", "braided hemp"] },
+  { n: "Steel", p: 600, g: "NG", a: ["steel"] },
+  { n: "Steel Mold", p: 900, g: "NG", a: ["steel mold", "smold"] },
+  // D grade
+  { n: "Silver Nugget", p: 800, g: "D", a: ["silver", "silver nugget", "nugget"] },
+  { n: "Charcoal", p: 600, g: "D", a: ["charcoal"] },
+  { n: "Coarse Bone Powder", p: 300, g: "D", a: ["cbp", "coarse", "bone powder", "powder"] },
+  { n: "Cokes", p: 900, g: "D", a: ["cokes", "coke"] },
+  { n: "Leather", p: 1200, g: "D", a: ["leather"] },
+  { n: "Cord", p: 280, g: "D", a: ["cord"] },
+  { n: "High Grade Suede", p: 700, g: "D", a: ["hgs", "high grade suede", "high suede"] },
+  { n: "Silver Mold", p: 3200, g: "D", a: ["silver mold", "smm"] },
+  { n: "Gemstone D", p: 600, g: "D", a: ["gemstone d", "gem d", "gemd"] },
+  // C grade
+  { n: "Mithril Ore", p: 2400, g: "C", a: ["mithril", "mithril ore"] },
+  { n: "Oriharukon Ore", p: 2000, g: "C", a: ["ori", "oriharukon ore", "ori ore"] },
+  { n: "Stone of Purity", p: 5000, g: "C", a: ["sop", "stone of purity", "purity stone"] },
+  { n: "Adamantite Nugget", p: 2000, g: "C", a: ["adamantite", "adaman", "ada"] },
+  { n: "Crafted Leather", p: 3000, g: "C", a: ["crafted", "crafted leather", "cl"] },
+  { n: "Metallic Fiber", p: 2600, g: "C", a: ["metallic", "fiber", "metallic fiber", "mf"] },
+  { n: "Varnish of Purity", p: 4000, g: "C", a: ["vop", "varnish of purity"] },
+  { n: "Synthetic Cokes", p: 3000, g: "C", a: ["synthetic", "synthetic cokes", "scokes"] },
+  { n: "Artisan's Frame", p: 12000, g: "C", a: ["artisan", "artisans frame", "af"] },
+  { n: "Blacksmith's Frame", p: 15000, g: "C", a: ["blacksmith", "blacksmiths frame", "bf"] },
+  { n: "Metal Hardener", p: 1800, g: "C", a: ["metal hardener", "mh"] },
+  { n: "Oriharukon", p: 9000, g: "C", a: ["oriharukon"] },
+  { n: "Gemstone C", p: 3200, g: "C", a: ["gemstone c", "gem c", "gemc"] },
+  // B grade
+  { n: "Mold Glue", p: 12000, g: "B", a: ["mold glue", "glue", "mg"] },
+  { n: "Mold Lubricant", p: 12000, g: "B", a: ["lub", "mold lubricant", "lubricant"] },
+  { n: "Mold Hardener", p: 12000, g: "B", a: ["mold hardener", "mhard"] },
+  { n: "Enria", p: 30000, g: "B", a: ["enria"] },
+  { n: "Asofe", p: 30000, g: "B", a: ["asofe"] },
+  { n: "Gemstone B", p: 9000, g: "B", a: ["gemstone b", "gem b", "gemb"] },
+  { n: "Maestro Mold", p: 60000, g: "B", a: ["maestro mold", "mm"] },
+  { n: "Maestro Holder", p: 40000, g: "B", a: ["maestro holder", "mholder"] },
+  { n: "Maestro Anvil Lock", p: 25000, g: "B", a: ["maestro anvil", "anvil lock", "anvil", "mal"] },
+  { n: "Craftsman Mold", p: 50000, g: "B", a: ["craftsman", "craftsman mold", "cm"] },
+];
+
+export const GRADE_COLOR: Record<Grade, string> = {
+  NG: "var(--color-ng)",
+  D: "var(--color-d)",
+  C: "var(--color-c)",
+  B: "var(--color-b)",
+};
