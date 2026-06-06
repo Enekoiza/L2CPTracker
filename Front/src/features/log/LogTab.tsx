@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useStore, memberStats } from "../../hooks/useStore";
+import { memberStats, useContributions, useMembers } from "../../hooks/queries";
 import { Empty } from "../../components/ui";
 import { fmt, fmtDate } from "../../lib/search";
 
@@ -10,26 +10,40 @@ function badgeClass(badge: string): string {
 }
 
 export function LogTab() {
-  const members = useStore((s) => s.members);
-  const log = useStore((s) => s.log);
+  const { data: members = [], isLoading: mLoading } = useMembers();
+  const { data: contributions = [], isLoading: cLoading, isError } = useContributions();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const rows = useMemo(() => {
     const r = members
-      .map((m) => ({ m, ...memberStats(log, m) }))
+      .map((m) => ({ id: m.id, name: m.name, ...memberStats(contributions, m.id) }))
       .sort((a, b) => b.total - a.total);
     const grand = r.reduce((s, x) => s + x.total, 0);
     const max = Math.max(...r.map((x) => x.total), 1);
     return { r, grand, max };
-  }, [members, log]);
+  }, [members, contributions]);
 
-  const toggle = (m: string) =>
+  const toggle = (id: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
-      next.has(m) ? next.delete(m) : next.add(m);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
 
+  if (mLoading || cLoading) {
+    return (
+      <div className="fade">
+        <Empty>Loading leaderboard…</Empty>
+      </div>
+    );
+  }
+  if (isError) {
+    return (
+      <div className="fade">
+        <Empty>Could not reach the server. Check your connection and retry.</Empty>
+      </div>
+    );
+  }
   if (rows.r.length === 0 || rows.grand === 0) {
     return (
       <div className="fade">
@@ -46,21 +60,23 @@ export function LogTab() {
     <div className="fade">
       {rows.r.map((row, i) => {
         const share = rows.grand > 0 ? (row.total / rows.grand) * 100 : 0;
-        const open = expanded.has(row.m);
+        const open = expanded.has(row.id);
         const entries = open
-          ? log.filter((e) => e.member === row.m).sort((a, b) => b.ts - a.ts)
+          ? contributions
+              .filter((e) => e.memberId === row.id)
+              .sort((a, b) => b.ts - a.ts)
           : [];
 
         return (
           <div
-            key={row.m}
-            onClick={() => toggle(row.m)}
+            key={row.id}
+            onClick={() => toggle(row.id)}
             className="bg-panel border border-border rounded-xl p-3 mb-2.5 cursor-pointer"
           >
             <div className="flex justify-between items-center mb-2">
               <div className="flex items-center gap-2.5">
                 <span className="text-[13px] text-muted w-5 font-bold">{i + 1}</span>
-                <span className="text-[15px] font-semibold">{row.m}</span>
+                <span className="text-[15px] font-semibold">{row.name}</span>
               </div>
               <div className="text-right">
                 <div className="text-base font-bold text-green">{row.total}</div>
@@ -92,7 +108,7 @@ export function LogTab() {
                       className="flex justify-between items-start py-2 border-b border-[#1c1c1c] last:border-none text-xs gap-2"
                     >
                       <div>
-                        <div className="text-text">{e.desc}</div>
+                        <div className="text-text">{e.description}</div>
                         <div className="text-[#666] text-[10px] mt-0.5">
                           {fmtDate(e.ts)}
                         </div>
@@ -106,7 +122,7 @@ export function LogTab() {
                         </span>
                       </div>
                       <div className="text-right shrink-0">
-                        <div className="text-green font-bold">+{e.pts}</div>
+                        <div className="text-green font-bold">+{e.points}</div>
                       </div>
                     </div>
                   ))

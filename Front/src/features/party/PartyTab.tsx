@@ -1,6 +1,10 @@
 import { useState } from "react";
-import { useStore } from "../../hooks/useStore";
 import { useItemRows } from "../../hooks/useItemRows";
+import {
+  useCreateContributions,
+  useMembers,
+  useSettings,
+} from "../../hooks/queries";
 import { useToast } from "../../components/Toast";
 import { Card, Label, Button } from "../../components/ui";
 import { MemberChips } from "../../components/MemberChips";
@@ -9,9 +13,11 @@ import { fmt } from "../../lib/search";
 import type { TabKey } from "../../types";
 
 export function PartyTab({ goTo }: { goTo: (t: TabKey) => void }) {
-  const members = useStore((s) => s.members);
-  const divisor = useStore((s) => s.divisor);
-  const addEntries = useStore((s) => s.addEntries);
+  const { data: members = [] } = useMembers();
+  const { data: settings } = useSettings();
+  const divisor = settings?.divisor ?? 1000;
+
+  const createContributions = useCreateContributions();
   const toast = useToast();
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -19,31 +25,35 @@ export function PartyTab({ goTo }: { goTo: (t: TabKey) => void }) {
 
   const count = selected.size;
   const each = count > 0 ? rowsApi.total / count : 0;
-  const canLog = count > 0 && rowsApi.total > 0;
+  const canLog = count > 0 && rowsApi.total > 0 && !createContributions.isPending;
 
-  const toggle = (m: string) =>
+  const toggle = (id: string) =>
     setSelected((prev) => {
       const next = new Set(prev);
-      next.has(m) ? next.delete(m) : next.add(m);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
 
-  const log = () => {
-    if (!canLog) return;
+  const log = async () => {
+    if (count === 0 || rowsApi.total <= 0) return;
     const eachPts = fmt(rowsApi.total / count);
-    addEntries(
-      [...selected].map((m) => ({
-        type: "mat" as const,
-        member: m,
-        pts: eachPts,
-        desc: `Party loot: ${rowsApi.summary}`,
-        badge: `PARTY ÷${count}`,
-      }))
-    );
-    rowsApi.reset();
-    setSelected(new Set());
-    toast("Party split logged!");
-    goTo("log");
+    try {
+      await createContributions.mutateAsync(
+        [...selected].map((memberId) => ({
+          memberId,
+          type: "Material" as const,
+          points: eachPts,
+          description: `Party loot: ${rowsApi.summary}`,
+          badge: `PARTY ÷${count}`,
+        }))
+      );
+      rowsApi.reset();
+      setSelected(new Set());
+      toast("Party split logged!");
+      goTo("log");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Failed to log party split");
+    }
   };
 
   return (
@@ -65,7 +75,7 @@ export function PartyTab({ goTo }: { goTo: (t: TabKey) => void }) {
       </div>
 
       <Button onClick={log} disabled={!canLog}>
-        Log Party Split
+        {createContributions.isPending ? "Logging…" : "Log Party Split"}
       </Button>
     </div>
   );

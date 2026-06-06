@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useStore } from "../../hooks/useStore";
+import { useCreateContributions, useMembers } from "../../hooks/queries";
 import { useToast } from "../../components/Toast";
 import { EVENTS } from "../../data/events";
 import { Card, Label, Button, Preview } from "../../components/ui";
@@ -7,8 +7,8 @@ import { MemberChips } from "../../components/MemberChips";
 import type { TabKey } from "../../types";
 
 export function EventsTab({ goTo }: { goTo: (t: TabKey) => void }) {
-  const members = useStore((s) => s.members);
-  const addEntries = useStore((s) => s.addEntries);
+  const { data: members = [] } = useMembers();
+  const createContributions = useCreateContributions();
   const toast = useToast();
 
   const [event, setEvent] = useState<string | null>(null);
@@ -16,30 +16,34 @@ export function EventsTab({ goTo }: { goTo: (t: TabKey) => void }) {
 
   const selectedEvent = EVENTS.find((e) => e.n === event) ?? null;
   const pts = selectedEvent?.p ?? 0;
-  const canLog = !!selectedEvent && attended.size > 0;
+  const canLog = !!selectedEvent && attended.size > 0 && !createContributions.isPending;
 
-  const toggle = (m: string) =>
+  const toggle = (id: string) =>
     setAttended((prev) => {
       const next = new Set(prev);
-      next.has(m) ? next.delete(m) : next.add(m);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
 
-  const log = () => {
-    if (!canLog) return;
-    addEntries(
-      [...attended].map((m) => ({
-        type: "event" as const,
-        member: m,
-        pts: selectedEvent!.p,
-        desc: selectedEvent!.n,
-        badge: "EVENT",
-      }))
-    );
-    setEvent(null);
-    setAttended(new Set());
-    toast("Event logged!");
-    goTo("log");
+  const log = async () => {
+    if (!selectedEvent || attended.size === 0) return;
+    try {
+      await createContributions.mutateAsync(
+        [...attended].map((memberId) => ({
+          memberId,
+          type: "Event" as const,
+          points: selectedEvent.p,
+          description: selectedEvent.n,
+          badge: "EVENT",
+        }))
+      );
+      setEvent(null);
+      setAttended(new Set());
+      toast("Event logged!");
+      goTo("log");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Failed to log event");
+    }
   };
 
   return (
@@ -73,7 +77,7 @@ export function EventsTab({ goTo }: { goTo: (t: TabKey) => void }) {
       <Preview title="Each Member Gets">{pts}</Preview>
 
       <Button onClick={log} disabled={!canLog}>
-        Log Event
+        {createContributions.isPending ? "Logging…" : "Log Event"}
       </Button>
     </div>
   );

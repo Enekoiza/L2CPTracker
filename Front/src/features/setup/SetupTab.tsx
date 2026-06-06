@@ -1,8 +1,14 @@
-import { useState } from "react";
-import { useStore } from "../../hooks/useStore";
+import { useEffect, useState } from "react";
+import {
+  useCreateMember,
+  useDeleteMember,
+  useMembers,
+  useSettings,
+  useUpdateDivisor,
+} from "../../hooks/queries";
 import { useToast } from "../../components/Toast";
 import { EVENTS } from "../../data/events";
-import { Card, Label, Button, Empty } from "../../components/ui";
+import { Card, Label, Empty } from "../../components/ui";
 import { fmt } from "../../lib/search";
 
 const EXAMPLES: [string, number][] = [
@@ -12,33 +18,48 @@ const EXAMPLES: [string, number][] = [
 ];
 
 export function SetupTab() {
-  const members = useStore((s) => s.members);
-  const divisor = useStore((s) => s.divisor);
-  const addMember = useStore((s) => s.addMember);
-  const removeMember = useStore((s) => s.removeMember);
-  const setDivisor = useStore((s) => s.setDivisor);
-  const reset = useStore((s) => s.reset);
+  const { data: members = [] } = useMembers();
+  const { data: settings } = useSettings();
+  const createMember = useCreateMember();
+  const deleteMember = useDeleteMember();
+  const updateDivisor = useUpdateDivisor();
   const toast = useToast();
 
   const [name, setName] = useState("");
+  const [divisor, setDivisorLocal] = useState(settings?.divisor ?? 1000);
 
-  const add = () => {
-    if (addMember(name)) setName("");
-    else setName("");
+  // keep the slider in sync once settings load / change elsewhere
+  useEffect(() => {
+    if (settings?.divisor) setDivisorLocal(settings.divisor);
+  }, [settings?.divisor]);
+
+  const add = async () => {
+    const n = name.trim();
+    if (!n) return;
+    try {
+      await createMember.mutateAsync(n);
+      setName("");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not add member");
+      setName("");
+    }
   };
 
-  const remove = (m: string) => {
-    if (confirm(`Remove ${m}? Their log entries remain.`)) removeMember(m);
+  const remove = async (id: string, label: string) => {
+    if (!confirm(`Remove ${label}? Their contributions are removed too.`)) return;
+    try {
+      await deleteMember.mutateAsync(id);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not remove member");
+    }
   };
 
-  const doReset = () => {
-    if (
-      confirm(
-        "Reset ALL data? Members, points, and log will be erased. This cannot be undone."
-      )
-    ) {
-      reset();
-      toast("All data reset");
+  const commitDivisor = async (value: number) => {
+    if (value === settings?.divisor) return;
+    try {
+      await updateDivisor.mutateAsync(value);
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not update divisor");
     }
   };
 
@@ -56,7 +77,8 @@ export function SetupTab() {
           />
           <button
             onClick={add}
-            className="bg-gold text-black border-none rounded-[10px] px-[18px] font-bold cursor-pointer"
+            disabled={createMember.isPending}
+            className="bg-gold text-black border-none rounded-[10px] px-[18px] font-bold cursor-pointer disabled:opacity-50"
           >
             Add
           </button>
@@ -66,12 +88,12 @@ export function SetupTab() {
         ) : (
           members.map((m) => (
             <div
-              key={m}
+              key={m.id}
               className="flex justify-between items-center bg-panel2 border border-border rounded-[10px] px-3 py-2.5 mb-2"
             >
-              <span>{m}</span>
+              <span>{m.name}</span>
               <button
-                onClick={() => remove(m)}
+                onClick={() => remove(m.id, m.name)}
                 className="bg-none border-none text-[color:var(--color-b)] text-lg cursor-pointer"
               >
                 ×
@@ -90,7 +112,9 @@ export function SetupTab() {
           max={2000}
           step={50}
           value={divisor}
-          onChange={(e) => setDivisor(parseInt(e.target.value))}
+          onChange={(e) => setDivisorLocal(parseInt(e.target.value))}
+          onMouseUp={(e) => commitDivisor(parseInt((e.target as HTMLInputElement).value))}
+          onTouchEnd={(e) => commitDivisor(parseInt((e.target as HTMLInputElement).value))}
           className="slider my-3.5"
         />
         <div className="flex flex-col gap-1.5 mt-2.5 text-xs text-muted">
@@ -113,13 +137,6 @@ export function SetupTab() {
             <span className="text-green font-semibold">{ev.p} pts</span>
           </div>
         ))}
-      </Card>
-
-      <Card>
-        <Label>Danger Zone</Label>
-        <Button variant="danger" small onClick={doReset}>
-          Reset All Data
-        </Button>
       </Card>
     </div>
   );
